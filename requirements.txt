@@ -18,7 +18,7 @@ blivet==3.7.1
 blivet-gui==2.4.2
 Brlapi==0.8.4
 Brotli==1.0.9
-certifi==2022.9.24
+certifi==2023.7.22
 cffi==1.15.1
 chardet==5.2.0
 charset-normalizer==3.1.0

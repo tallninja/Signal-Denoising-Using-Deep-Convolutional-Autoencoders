@@ -1,10 +1,9 @@
 import os
 import random
 import numpy as np
-from scipy.io import wavfile
 import torchaudio
 from pydub import AudioSegment
-from audio_utils import resample
+from tqdm import tqdm
 
 np.random.seed(999)
 
@@ -34,45 +33,137 @@ def get_fold_names():
     return fold_names
 
 
-def diffNoiseType(files, noise_type):
+def diff_noise_type(files, noise_type):
     result = []
-    for i in files:
-        if i.endswith(".wav"):
-            fname = i.split("-")
+    for file_name in files:
+        if file_name.endswith(".wav"):
+            fname = file_name.split("-")
             if fname[1] != str(noise_type):
-                result.append(i)
+                result.append(file_name)
     return result
 
 
-def oneNoiseType(files, noise_type):
+def same_noise_type(files, noise_type):
     result = []
-    for i in files:
-        if i.endswith(".wav"):
-            fname = i.split("-")
+    for file_name in files:
+        if file_name.endswith(".wav"):
+            fname = file_name.split("-")
             if fname[1] == str(noise_type):
-                result.append(i)
+                result.append(file_name)
     return result
 
 
-def genNoise(filename, num_per_fold, dest):
-    source_file = os.path.join(TARGET_FOLDER, filename)
-    source_audio = AudioSegment.from_file(source_file)
-    fold_names = get_fold_names()
-    counter = 0
+def corrupt_audio_file(audio_file, noise_file, snr):
+    original_audio, _ = torchaudio.load(audio_file)
+    original_audio = original_audio.numpy()
+    original_audio = np.reshape(original_audio, -1)
+    # create power array of the original audio
+    original_audio_power = original_audio ** 2
+    # calculate average signal power of the original audio and convert to dB
+    original_audio_avg_power = np.mean(original_audio_power)
+    original_audio_avg_power_db = 10 * np.log10(original_audio_avg_power)
+    # calculate noise power
+    added_noise_avg_power_db = original_audio_avg_power_db - snr
 
-    for fold in fold_names:
-        dirname = os.path.join(URBAN_SOUND_8K_DIR, fold)
-        dirlist = os.listdir(dirname)
-        total_noise = len(dirlist)
-        samples = np.random.choice(total_noise, num_per_fold, replace=False)
-        for sample in samples:
-            noise_file = os.path.join(dirlist, dirlist[sample])
-            try:
-                noise_audio = AudioSegment.from_file(noise_file)
-                combined = source_audio.overlay(noise_audio, times=5)
-                target_dest = dest+"/" + \
-                    filename[:len(filename)-4]+"_noise_"+str(counter)+".wav"
-                combined.export(target_dest, format="wav")
-                counter += 1
-            except:
-                print("Some kind of audio decoding error occurred, skipping this case")
+    noise, _ = torchaudio.load(noise_file)
+    noise = noise.numpy()
+    noise = np.reshape(noise, -1)
+    noise_power = noise ** 2
+    noise_avg_power = np.mean(noise_power)
+    noise_avg_power_db = 10 * np.log10(noise_avg_power)
+
+    delta_noise_power = added_noise_avg_power_db - noise_avg_power_db
+
+    try:
+        source_audio = AudioSegment.from_file(audio_file)
+        noise_audio = AudioSegment.from_file(noise_file)
+    except:
+        pass
+
+    noise_audio = noise_audio + delta_noise_power
+    corrupted_audio = source_audio.overlay(noise_audio, times=5)
+    # corrupted_audio.export(dest, format='wav')
+    return corrupted_audio
+
+
+def corrupt_audio_file_with_noise_type(filename, dest, snr, noise_type, gen_noise_type):
+    success = False
+    fold_names = get_fold_names()
+
+    while not success:
+        try:
+            fold = np.random.choice(fold_names, 1, replace=False)[0]
+            fold_dir = os.path.join(URBAN_SOUND_8K_DIR, fold)
+            fold_noises = os.listdir(fold_dir)
+            possible_noises = gen_noise_type(fold_noises, noise_type)
+            possible_noises_count = len(possible_noises)
+            choice = np.random.choice(
+                possible_noises_count, 1, replace=False)[0]
+            noise_file = possible_noises[choice]
+
+            noise_file = os.path.join(fold_dir, noise_file)
+            audio_file = os.path.join(TARGET_FOLDER, filename)
+            dest_path = os.path.join(dest, filename)
+
+            corrupted_audio = corrupt_audio_file(audio_file, noise_file, snr)
+            corrupted_audio.export(dest_path, format='wav')
+            success = True
+        except Exception as e:
+            print("An error occurred... skipping")
+            pass
+
+
+def generate_train_data(noise_type):
+    input_folder = os.path.join(
+        DATASETS_FOLDER, f'class_{noise_type}_train_input')
+    output_folder = os.path.join(
+        DATASETS_FOLDER, f'class_{noise_type}_train_output')
+
+    if not os.path.exists(input_folder):
+        print("Creating train input folder...")
+        os.makedirs(input_folder)
+
+    if not os.path.exists(output_folder):
+        print("Creating train output folder...")
+        os.makedirs(output_folder)
+
+    for file in tqdm(os.listdir(TARGET_FOLDER)):
+        filename = os.fsdecode(file)
+        if filename.endswith(".wav"):
+            snr = random.randint(0, 10)
+            corrupt_audio_file_with_noise_type(filename, input_folder, snr,
+                                               noise_type, same_noise_type)
+            corrupt_audio_file_with_noise_type(filename, output_folder, snr,
+                                               noise_type, diff_noise_type)
+
+
+def generate_test_data(noise_type):
+    target_folder = os.path.join(DATASETS_FOLDER, "clean_testset_wav")
+    input_folder = os.path.join(
+        DATASETS_FOLDER, f'class_{noise_type}_test_input')
+
+    if not os.path.exists(input_folder):
+        print("Making test input folder")
+        os.makedirs(input_folder)
+
+    for file in tqdm(os.listdir(target_folder)):
+        filename = os.fsdecode(file)
+        if filename.endswith(".wav"):
+            snr = random.randint(0, 10)
+            corrupt_audio_file_with_noise_type(
+                filename, input_folder, snr, noise_type, same_noise_type)
+
+
+def generate_dataset():
+    for key in noise_classes:
+        print("\t{} : {}".format(key, noise_classes[key]))
+    noise_type = int(input("Enter the noise class dataset to generate :\t"))
+
+    print("##################### GENERATING TRAIN DATA #####################")
+    generate_train_data(noise_type)
+    print("##################### GENERATING TEST DATA #####################")
+    generate_test_data(noise_type)
+
+
+if __name__ == '__main__':
+    generate_dataset()

@@ -1,2 +1,4 @@
-env
+.env
 datasets
+
+__pycache__

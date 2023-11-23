@@ -86,7 +86,7 @@ def corrupt_audio_file(audio_file, noise_file, snr):
     return corrupted_audio
 
 
-def corrupt_audio_file_with_noise_type(filename, dest, snr, noise_type, gen_noise_type):
+def corrupt_audio_file_with_noise_type(filename, target_folder, dest, snr, noise_type, gen_noise_type):
     success = False
     fold_names = get_fold_names()
 
@@ -102,14 +102,13 @@ def corrupt_audio_file_with_noise_type(filename, dest, snr, noise_type, gen_nois
             noise_file = possible_noises[choice]
 
             noise_file = os.path.join(fold_dir, noise_file)
-            audio_file = os.path.join(TARGET_FOLDER, filename)
+            audio_file = os.path.join(target_folder, filename)
             dest_path = os.path.join(dest, filename)
 
             corrupted_audio = corrupt_audio_file(audio_file, noise_file, snr)
             corrupted_audio.export(dest_path, format='wav')
             success = True
         except Exception as e:
-            print("An error occurred... skipping")
             pass
 
 
@@ -127,11 +126,11 @@ def generate_train_data(noise_type):
         print("Creating train output folder...")
         os.makedirs(output_folder)
 
-    for file in tqdm(os.listdir(TARGET_FOLDER)):
-        filename = os.fsdecode(file)
+    for file_ in tqdm(os.listdir(TARGET_FOLDER)):
+        filename = os.fsdecode(file_)
         if filename.endswith(".wav"):
             snr = random.randint(0, 10)
-            corrupt_audio_file_with_noise_type(filename, input_folder, snr,
+            corrupt_audio_file_with_noise_type(filename, TARGET_FOLDER, input_folder, snr,
                                                noise_type, same_noise_type)
             corrupt_audio_file_with_noise_type(filename, output_folder, snr,
                                                noise_type, diff_noise_type)
@@ -146,12 +145,12 @@ def generate_test_data(noise_type):
         print("Making test input folder")
         os.makedirs(input_folder)
 
-    for file in tqdm(os.listdir(target_folder)):
-        filename = os.fsdecode(file)
+    for file_ in tqdm(os.listdir(target_folder)):
+        filename = os.fsdecode(file_)
         if filename.endswith(".wav"):
             snr = random.randint(0, 10)
             corrupt_audio_file_with_noise_type(
-                filename, input_folder, snr, noise_type, same_noise_type)
+                filename, target_folder, input_folder, snr, noise_type, same_noise_type)
 
 
 def generate_dataset():
@@ -159,8 +158,8 @@ def generate_dataset():
         print("\t{} : {}".format(key, noise_classes[key]))
     noise_type = int(input("Enter the noise class dataset to generate :\t"))
 
-    print("##################### GENERATING TRAIN DATA #####################")
-    generate_train_data(noise_type)
+    # print("##################### GENERATING TRAIN DATA #####################")
+    # generate_train_data(noise_type)
     print("##################### GENERATING TEST DATA #####################")
     generate_test_data(noise_type)
 

@@ -1,15 +1,13 @@
-# Signal Denoising Using Deep Convolutional Autoencoders
+---
+title: Fyp
+emoji: 👀
+colorFrom: red
+colorTo: gray
+sdk: gradio
+sdk_version: 4.13.0
+app_file: app.py
+pinned: false
+license: mit
+---
 
-## How to run it
-
-### 1. Install Dependencies
-
-```text
-pip install -r requirements.txt
-```
-
-### 2. Run the Gradio UI
-
-```text
-python ui.py
-```
+Check out the configuration reference at https://huggingface.co/docs/hub/spaces-config-reference

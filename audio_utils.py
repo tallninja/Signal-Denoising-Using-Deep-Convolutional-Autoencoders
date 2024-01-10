@@ -9,7 +9,7 @@ from constants import SAMPLE_RATE
 
 def resample(original, old_rate, new_rate):
     if new_rate != old_rate:
-        return librosa.resample(original, old_rate, new_rate)
+        return librosa.resample(original, orig_sr=old_rate, target_sr=new_rate)
     return original
 
 

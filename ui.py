@@ -1,10 +1,11 @@
 #!/usr/bin/env python3
 
 import gradio as gr
-from inference import infer_model
+from inference import infer_model, infer_model_wt
 
 
 def main(audio_input):
+    # nsr, denoised = infer_model(audio_input)
     nsr, denoised = infer_model(audio_input)
     return nsr, denoised
 

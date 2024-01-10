@@ -5,7 +5,7 @@ from constants import *
 from model import model
 from audio_utils import load_audio_file
 
-weights = os.path.join(BASE_DIR, "weights", "white.pth")
+weights = os.path.join(BASE_DIR, "weights", "7.pth")
 optimizer = torch.optim.Adam(model.parameters())
 model_state = torch.load(weights, map_location=DEVICE)
 model.load_state_dict(model_state)

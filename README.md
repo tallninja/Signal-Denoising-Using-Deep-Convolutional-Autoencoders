@@ -25,5 +25,5 @@ pip install -r requirements.txt
 ### 2. Run the Gradio UI
 
 ```text
-python ui.py
+python app.py
 ```

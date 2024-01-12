@@ -34,7 +34,7 @@ def denoise_audio_wt(audio_data, sr=SAMPLE_RATE, wavelet='db2', threshold_type='
 def denoise_audio(audio_data, sr=SAMPLE_RATE):
     audio_data = torch.stft(input=audio_data, n_fft=N_FFT,
                             hop_length=HOP_LENGTH, normalized=True)
-    print(audio_data.shape)
+    # print(audio_data.shape)
     denoised = model(audio_data[None, ...], is_istft=True)
     denoised = denoised[0].view(-1).detach().cpu().numpy()
     return sr, denoised[np.argmax(denoised > 0):]
